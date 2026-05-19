@@ -30,9 +30,7 @@
         Generate Image
       </button>
 
-      <button onclick="generate('pdf')" class="bg-green-500 px-5 py-3 rounded-2xl font-semibold hover:scale-105 transition">
-        Generate PDF
-      </button>
+      
 
       <button onclick="generate('video')" class="bg-purple-500 px-5 py-3 rounded-2xl font-semibold hover:scale-105 transition">
         Generate Video Prompt
@@ -54,7 +52,7 @@
     // Load API key from config.js
     // Example config.js:
     // window.OPENAI_API_KEY = 'sk-xxxx';
-    const API_KEY = window.OPENAI_API_KEY;
+    const API_KEY = "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";
 
     async function generate(type) {
       const prompt = document.getElementById('prompt').value;
@@ -70,7 +68,7 @@
       loading.classList.remove('hidden');
 
       try {
-        if (type === 'text' || type === 'pdf') {
+        if (type === 'text') {
           const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -78,7 +76,7 @@
               'Authorization': `Bearer ${API_KEY}`
             },
             body: JSON.stringify({
-              model: 'gpt-4.1-mini',
+              model: 'gpt-4o-mini',
               messages: [
                 {
                   role: 'user',
@@ -102,17 +100,7 @@
             window.generatedText = text;
           }
 
-          if (type === 'pdf') {
-            const blob = new Blob([text], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-
-            output.innerHTML = `
-              <iframe src="${url}" class="w-full h-[500px] rounded-2xl bg-white"></iframe>
-              <a href="${url}" download="generated.pdf" class="inline-block bg-green-500 px-4 py-2 rounded-xl mt-2">
-                Download PDF
-              </a>
-            `;
-          }
+          
         }
 
         if (type === 'image') {
@@ -123,7 +111,7 @@
               'Authorization': `Bearer ${API_KEY}`
             },
             body: JSON.stringify({
-              model: 'gpt-image-1',
+              model: 'gpt-image-1' // cheapest available image generation option,
               prompt: prompt,
               size: '1024x1024'
             })
