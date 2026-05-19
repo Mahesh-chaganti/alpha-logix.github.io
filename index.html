@@ -11,7 +11,7 @@
     <div>
       <h1 class="text-4xl font-bold">AI File Generator</h1>
       <p class="text-zinc-400 mt-2">
-        Generate text, images, PDFs, or videos using OpenAI.
+        Generate text, images, or video prompts using OpenAI.
       </p>
     </div>
 
@@ -30,8 +30,6 @@
         Generate Image
       </button>
 
-      
-
       <button onclick="generate('video')" class="bg-purple-500 px-5 py-3 rounded-2xl font-semibold hover:scale-105 transition">
         Generate Video Prompt
       </button>
@@ -45,15 +43,6 @@
   </div>
 
   <script>
-    // IMPORTANT:
-    // NEVER expose API keys publicly in production.
-    // For testing only.
-
-    // Load API key from config.js
-    // Example config.js:
-    // window.OPENAI_API_KEY = 'sk-xxxx';
-    const API_KEY = "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";
-
     async function generate(type) {
       const prompt = document.getElementById('prompt').value;
       const output = document.getElementById('output');
@@ -68,57 +57,39 @@
       loading.classList.remove('hidden');
 
       try {
-        if (type === 'text') {
-          const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${API_KEY}`
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                {
-                  role: 'user',
-                  content: prompt
-                }
-              ]
-            })
-          });
+        // Call Vercel backend API
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            prompt: prompt,
+            type: type
+          })
+        });
 
-          const data = await response.json();
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Request failed');
+        }
+
+        const data = await response.json();
+
+        if (type === 'text') {
           const text = data.choices?.[0]?.message?.content || 'No response';
 
-          if (type === 'text') {
-            output.innerHTML = `
-              <div class="bg-zinc-800 p-4 rounded-2xl whitespace-pre-wrap">${text}</div>
-              <button onclick="downloadText()" class="bg-white text-black px-4 py-2 rounded-xl">
-                Download TXT
-              </button>
-            `;
+          output.innerHTML = `
+            <div class="bg-zinc-800 p-4 rounded-2xl whitespace-pre-wrap">${text}</div>
+            <button onclick="downloadText()" class="bg-white text-black px-4 py-2 rounded-xl">
+              Download TXT
+            </button>
+          `;
 
-            window.generatedText = text;
-          }
-
-          
+          window.generatedText = text;
         }
 
         if (type === 'image') {
-          const response = await fetch('https://api.openai.com/v1/images/generations', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${API_KEY}`
-            },
-            body: JSON.stringify({
-              model: 'gpt-image-1',
-              prompt: prompt,
-              size: '1024x1024'
-            })
-          });
-
-          const data = await response.json();
-
           const base64 = data.data?.[0]?.b64_json;
 
           if (!base64) {
@@ -160,7 +131,7 @@
         console.error(e);
         output.innerHTML = `
           <div class="bg-red-500/20 border border-red-500 p-4 rounded-2xl">
-            ${e.message}
+            <strong>Error:</strong> ${e.message}
           </div>
         `;
       }
