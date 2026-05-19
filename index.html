@@ -6,42 +6,189 @@
   <title>AI File Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-black text-white min-h-screen flex items-center justify-center p-6">
-  <div class="w-full max-w-4xl bg-zinc-900 rounded-3xl shadow-2xl p-6 space-y-6">
-    <div>
-      <h1 class="text-4xl font-bold">AI File Generator</h1>
-      <p class="text-zinc-400 mt-2">
-        Generate text, images, or video prompts using OpenAI.
-      </p>
+<body class="bg-[#0d0d0f] text-white min-h-screen overflow-hidden relative">
+
+  <!-- BACKGROUND GLOW -->
+  <div class="absolute w-[700px] h-[700px] bg-white/5 blur-[140px] rounded-full -top-60 -left-60 animate-pulse"></div>
+
+  <div class="absolute w-[500px] h-[500px] bg-emerald-500/10 blur-[120px] rounded-full bottom-[-120px] right-[-120px]"></div>
+
+  <div class="absolute w-[400px] h-[400px] bg-orange-500/10 blur-[120px] rounded-full top-[20%] right-[10%]"></div>
+
+  <!-- FLOATING DOTS -->
+  <div class="absolute top-24 left-32 w-4 h-4 bg-green-400 rounded-full shadow-2xl animate-bounce"></div>
+  <div class="absolute top-44 left-44 w-2 h-2 bg-green-300 rounded-full"></div>
+  <div class="absolute top-56 left-52 w-3 h-3 bg-green-500 rounded-full"></div>
+
+  <div class="absolute top-28 right-40 w-4 h-4 bg-orange-400 rounded-full animate-bounce"></div>
+  <div class="absolute top-48 right-52 w-3 h-3 bg-orange-500 rounded-full"></div>
+
+  <!-- MAIN CONTENT -->
+  <div class="relative z-10 min-h-screen flex flex-col items-center justify-center px-6">
+
+    <!-- TITLE -->
+    <h1
+      class="
+        text-[72px]
+        md:text-[180px]
+        font-semibold
+        tracking-[-0.08em]
+        text-white/90
+        leading-none
+        select-none
+      "
+      style="
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          'SF Pro Display',
+          sans-serif;
+      "
+    >
+      Urbanist
+    </h1>
+
+    <!-- GLASS CARD -->
+    <div
+      class="
+        w-full
+        max-w-4xl
+        mt-8
+        rounded-[36px]
+        border
+        border-white/10
+        bg-white/5
+        backdrop-blur-3xl
+        shadow-2xl
+        p-6
+        md:p-8
+      "
+    >
+
+      <!-- HEADER -->
+      <div class="mb-6">
+        <h2 class="text-3xl font-semibold tracking-tight">
+          AI Generator
+        </h2>
+
+        <p class="text-white/45 mt-2 text-lg">
+          Generate text, images, or cinematic video prompts.
+        </p>
+      </div>
+
+      <!-- TEXTAREA -->
+      <textarea
+        id="prompt"
+        placeholder="Describe what you want to create..."
+        class="
+          w-full
+          h-44
+          bg-white/5
+          border
+          border-white/10
+          rounded-[28px]
+          p-6
+          text-lg
+          outline-none
+          resize-none
+          placeholder:text-white/30
+          focus:border-white/30
+          transition
+        "
+        style="
+          font-family:
+            -apple-system,
+            BlinkMacSystemFont,
+            'SF Pro Text',
+            sans-serif;
+        "
+      ></textarea>
+
+      <!-- BUTTONS -->
+      <div class="flex flex-wrap gap-4 mt-6">
+
+        <button
+          onclick="generate('text')"
+          class="
+            px-6
+            py-4
+            rounded-2xl
+            bg-white
+            text-black
+            font-semibold
+            hover:scale-105
+            active:scale-95
+            transition
+            shadow-xl
+          "
+        >
+          Generate Text
+        </button>
+
+        <button
+          onclick="generate('image')"
+          class="
+            px-6
+            py-4
+            rounded-2xl
+            bg-blue-500/80
+            backdrop-blur-xl
+            font-semibold
+            hover:scale-105
+            active:scale-95
+            transition
+            shadow-xl
+          "
+        >
+          Generate Image
+        </button>
+
+        <button
+          onclick="generate('video')"
+          class="
+            px-6
+            py-4
+            rounded-2xl
+            bg-purple-500/80
+            backdrop-blur-xl
+            font-semibold
+            hover:scale-105
+            active:scale-95
+            transition
+            shadow-xl
+          "
+        >
+          Video Prompt
+        </button>
+
+      </div>
+
+      <!-- LOADING -->
+      <div
+        id="loading"
+        class="
+          hidden
+          mt-6
+          text-yellow-300
+          font-medium
+          animate-pulse
+        "
+      >
+        Generating magic...
+      </div>
+
+      <!-- OUTPUT -->
+      <div
+        id="output"
+        class="
+          mt-8
+          space-y-4
+        "
+      ></div>
+
     </div>
 
-    <textarea
-      id="prompt"
-      placeholder="Describe what you want..."
-      class="w-full h-40 bg-zinc-800 rounded-2xl p-4 outline-none border border-zinc-700 focus:border-white resize-none"
-    ></textarea>
-
-    <div class="flex flex-wrap gap-3">
-      <button onclick="generate('text')" class="bg-white text-black px-5 py-3 rounded-2xl font-semibold hover:scale-105 transition">
-        Generate Text
-      </button>
-
-      <button onclick="generate('image')" class="bg-blue-500 px-5 py-3 rounded-2xl font-semibold hover:scale-105 transition">
-        Generate Image
-      </button>
-
-      <button onclick="generate('video')" class="bg-purple-500 px-5 py-3 rounded-2xl font-semibold hover:scale-105 transition">
-        Generate Video Prompt
-      </button>
-    </div>
-
-    <div id="loading" class="hidden text-yellow-400 font-medium">
-      Generating...
-    </div>
-
-    <div id="output" class="space-y-4"></div>
   </div>
-
   <script>
     async function generate(type) {
       const prompt = document.getElementById('prompt').value;
