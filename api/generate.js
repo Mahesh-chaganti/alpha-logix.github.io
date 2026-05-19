@@ -51,7 +51,7 @@ export default async function handler(req, res) {
       const response = await axios.post(
         'https://api.openai.com/v1/images/generations',
         {
-          model: 'dall-e-3',
+          model: 'dall-e-2',
           prompt: prompt,
           size: '1024x1024',
           response_format: 'b64_json'
