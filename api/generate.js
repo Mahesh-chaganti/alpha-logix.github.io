@@ -1,71 +1,156 @@
 const axios = require('axios');
-
 export default async function handler(req, res) {
-  // Allow CORS
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST");
   res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    "Access-Control-Allow-Headers",
+    "Content-Type"
   );
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
   }
 
   try {
+
     const { prompt, type } = req.body;
-    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-    if (!OPENAI_API_KEY) {
-      return res.status(500).json({ error: 'API key not configured' });
-    }
+    // =========================
+    // TEXT
+    // =========================
 
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
+    if (type === "text") {
 
-    // Text generation
-    if (type === 'text') {
       const response = await axios.post(
-        'https://api.openai.com/v1/chat/completions',
+
+        "https://api.openai.com/v1/chat/completions",
+
         {
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }]
+          model: "gpt-4o-mini",
+
+          messages: [
+            {
+              role: "user",
+              content: prompt
+            }
+          ]
         },
+
         {
-          headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` }
+          headers: {
+            "Content-Type": "application/json",
+
+            Authorization:
+              `Bearer ${process.env.OPENAI_API_KEY}`
+          }
         }
       );
-      return res.json(response.data);
+
+      return res.status(200).json(response.data);
     }
 
-    // Image generation
-    if (type === 'image') {
-      const response = await openai.images.generate({
-              model: "gpt-image-1",
-              prompt: prompt,
-              size: "1024x1024"
-        }
+    // =========================
+    // IMAGE
+    // =========================
+
+    if (type === "image") {
+
+      const response = await axios.post(
+
+        "https://api.openai.com/v1/images/generations",
+
         {
-          headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` }
+          model: "gpt-image-1",
+
+          prompt: prompt,
+
+          size: "1024x1024"
+        },
+
+        {
+          headers: {
+            "Content-Type": "application/json",
+
+            Authorization:
+              `Bearer ${process.env.OPENAI_API_KEY}`
+          }
         }
       );
-      return res.json(response.data);
+
+      return res.status(200).json(response.data);
     }
 
-    return res.status(400).json({ error: 'Invalid type' });
+    // =========================
+    // VIDEO PROMPT
+    // =========================
+
+    if (type === "video") {
+
+      const response = await axios.post(
+
+        "https://api.openai.com/v1/chat/completions",
+
+        {
+          model: "gpt-4o-mini",
+
+          messages: [
+
+            {
+              role: "system",
+
+              content:
+                `
+                You generate cinematic
+                AI video prompts for:
+
+                - Sora
+                - Runway
+                - Kling
+                - Pika
+
+                Include:
+                - camera
+                - lighting
+                - realism
+                - environment
+                - cinematic details
+                `
+            },
+
+            {
+              role: "user",
+              content: prompt
+            }
+          ]
+        },
+
+        {
+          headers: {
+            "Content-Type": "application/json",
+
+            Authorization:
+              `Bearer ${process.env.OPENAI_API_KEY}`
+          }
+        }
+      );
+
+      return res.status(200).json(response.data);
+    }
+
+    return res.status(400).json({
+      error: "Invalid type"
+    });
+
   } catch (error) {
-    console.error('Error:', error.response?.data || error.message);
-    return res.status(500).json({ 
-      error: error.response?.data?.error?.message || error.message || 'Generation failed',
-      details: error.response?.data
+
+    console.error(error.response?.data || error);
+
+    return res.status(500).json({
+
+      error:
+        error.response?.data ||
+        error.message
     });
   }
 }
