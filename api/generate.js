@@ -65,9 +65,10 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: 'Invalid type' });
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error:', error.response?.data || error.message);
     return res.status(500).json({ 
-      error: error.message || 'Generation failed'
+      error: error.response?.data?.error?.message || error.message || 'Generation failed',
+      details: error.response?.data
     });
   }
 }
