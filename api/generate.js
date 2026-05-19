@@ -48,14 +48,11 @@ export default async function handler(req, res) {
 
     // Image generation
     if (type === 'image') {
-      const response = await axios.post(
-        'https://api.openai.com/v1/images/generations',
-        {
-          model: 'dall-e-2',
-          prompt: prompt,
-          size: '1024x1024',
-          response_format: 'b64_json'
-        },
+      const response = await openai.images.generate({
+              model: "gpt-image-1",
+              prompt: prompt,
+              size: "1024x1024"
+        }
         {
           headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` }
         }
