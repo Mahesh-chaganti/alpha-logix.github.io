@@ -3,65 +3,117 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alphalogix Sandbox</title>
+  <title>Alphalogix AI Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Glowing Audio Waveform Animation Utility */
+    .wave-bar {
+      width: 4px;
+      border-radius: 999px;
+      background: white;
+      animation: wave 1s infinite ease-in-out;
+    }
+    .wave-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+    .wave-bar:nth-child(2) { height: 18px; animation-delay: 0.2s; }
+    .wave-bar:nth-child(3) { height: 10px; animation-delay: 0.4s; }
+    .wave-bar:nth-child(4) { height: 20px; animation-delay: 0.6s; }
+
+    @keyframes wave {
+      0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+      50% { transform: scaleY(1.5); opacity: 1; }
+    }
+  </style>
 </head>
 <body class="bg-[#0d0d0f] text-white min-h-screen overflow-hidden relative">
 
-  <!-- SYSTEM INTERACTION PAINT OVERLAY -->
+  <!-- AI DRAWING CANVAS OVERLAY OVER ALL ELEMENTS -->
   <canvas id="overlayCanvas" class="fixed inset-0 w-full h-full pointer-events-none z-[9999]"></canvas>
 
+  <!-- BACKGROUND GLOW RING DECORATIONS -->
+  <div class="absolute w-[900px] h-[900px] bg-blue-500/20 blur-[160px] rounded-full -top-80 -left-80"></div>
+  <div class="absolute w-[800px] h-[800px] bg-orange-500/20 blur-[160px] rounded-full -bottom-60 -right-60"></div>
+  <div class="absolute w-[500px] h-[500px] bg-white/5 blur-[120px] rounded-full top-[25%] left-[35%]"></div>
+
+  <!-- FLOATING COLOR AMBIENT PARTICLES -->
+  <div class="absolute top-24 left-32 w-4 h-4 bg-blue-400 rounded-full shadow-2xl animate-bounce"></div>
+  <div class="absolute top-44 left-44 w-2 h-2 bg-blue-300 rounded-full"></div>
+  <div class="absolute top-56 left-52 w-3 h-3 bg-cyan-300 rounded-full"></div>
+  <div class="absolute top-28 right-40 w-4 h-4 bg-orange-400 rounded-full animate-bounce"></div>
+  <div class="absolute top-48 right-52 w-3 h-3 bg-orange-500 rounded-full"></div>
+  <div class="absolute top-60 right-44 w-2 h-2 bg-yellow-300 rounded-full"></div>
+
+  <!-- CONTAINER MAIN ENTRY GRAPHIC -->
   <div class="relative z-10 min-h-screen flex flex-col items-center justify-center px-6">
-    <h1 class="text-[54px] md:text-[120px] font-semibold tracking-[-0.08em] text-white/90 leading-none select-none">
+
+    <!-- LARGE BRAND TITLE HEADLINE -->
+    <h1 class="text-[72px] md:text-[180px] font-semibold tracking-[-0.08em] text-white/90 mountaineer leading-none select-none" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">
       Alphalogix
     </h1>
 
-    <div class="w-full max-w-2xl mt-8 rounded-[36px] border border-white/10 bg-white/5 backdrop-blur-3xl p-8 flex flex-col items-center gap-6">
-      <p class="text-white/60 text-center">Click Live Voice below and tell the AI model: <br><span class="text-cyan-400 font-mono">"Draw an upward trend line across my view."</span></p>
+    <!-- CENTERING HUB BLUR GLASS CARD -->
+    <div class="w-full max-w-4xl mt-8 rounded-[36px] border border-white/10 bg-white/5 backdrop-blur-3xl shadow-2xl p-6 md:p-8">
       
-      <div class="flex gap-4">
-        <button id="voiceBtn" class="px-6 py-4 rounded-2xl font-semibold bg-gradient-to-b from-cyan-400 to-blue-600 shadow-xl transition active:scale-95">
-          Live Voice
+      <!-- SUBHEAD LABELS -->
+      <div class="mb-6">
+        <p class="text-white/45 mt-2 text-lg">
+          Generate text, images, or cinematic video prompts.
+        </p>
+      </div>
+
+      <!-- MAIN INPUT CONTEXT CAPTURE FIELD -->
+      <textarea id="prompt" placeholder="Describe what you want to create..." class="w-full h-44 bg-white/5 border border-white/10 rounded-[28px] p-6 text-lg outline-none resize-none placeholder:text-white/30 focus:border-white/30 transition" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;"></textarea>
+
+      <!-- CONTROL PACK TRIGGERS -->
+      <div class="flex flex-wrap gap-4 mt-6">
+        <button onclick="generate('text')" class="px-6 py-4 rounded-2xl text-white font-semibold hover:scale-105 active:scale-95 transition shadow-2xl bg-gradient-to-b from-blue-400 to-blue-600">
+          Generate Text
         </button>
-        <button id="endVoiceBtn" class="hidden px-6 py-4 rounded-2xl font-semibold bg-gradient-to-b from-red-400 to-red-600 shadow-xl transition active:scale-95">
+
+        <button onclick="generate('image')" class="px-6 py-4 rounded-2xl text-white font-semibold hover:scale-105 active:scale-95 transition shadow-2xl bg-gradient-to-b from-[#4da3ff] to-[#0071e3]">
+          Generate Image
+        </button>
+
+        <button onclick="generate('video')" class="px-6 py-4 rounded-2xl text-white font-semibold hover:scale-105 active:scale-95 transition shadow-2xl bg-gradient-to-b from-orange-300 to-orange-500">
+          Video Prompt
+        </button>
+
+        <button id="voiceBtn" onclick="startVoiceChat()" class="px-6 py-4 rounded-2xl text-white font-semibold hover:scale-105 active:scale-95 transition shadow-2xl bg-gradient-to-b from-cyan-400 to-blue-600 flex items-center gap-3">
+          <div id="voiceWave" class="hidden flex gap-1 items-end h-5">
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+          </div>
+          <span id="voiceBtnText">Live Voice</span>
+        </button>
+
+        <button id="endVoiceBtn" onclick="stopVoiceChat()" class="hidden px-6 py-4 rounded-2xl text-white font-semibold hover:scale-105 active:scale-95 transition shadow-2xl bg-gradient-to-b from-red-400 to-red-600">
           End Call
         </button>
       </div>
+
+      <!-- ASYNC STATE NOTIFIERS -->
+      <div id="loading" class="hidden mt-6 text-yellow-300 font-medium animate-pulse">
+        Generating magic...
+      </div>
+
+      <!-- RENDER ENGINE OUTPUT TARGET -->
+      <div id="output" class="mt-8 space-y-4"></div>
+
     </div>
   </div>
 
-  <!-- APPLICATION CONTROLLER DISPATCHER -->
+  <!-- MOUNT SYSTEM LOGIC HOOKS -->
   <script type="module">
-    import { initVoiceChat, closeVoiceChat } from './realtime.js';
+    import { generate, downloadText, downloadVideoPrompt } from '/api/generate.js';
+    import { startVoiceChat, stopVoiceChat } from '/api/realtime.js';
 
-    const voiceBtn = document.getElementById("voiceBtn");
-    const endVoiceBtn = document.getElementById("endVoiceBtn");
-
-    voiceBtn.addEventListener("click", async () => {
-      voiceBtn.innerText = "Connecting...";
-      voiceBtn.disabled = true;
-
-      await initVoiceChat(
-        // Connection Success Handler
-        () => {
-          voiceBtn.innerText = "Live Connected";
-          endVoiceBtn.classList.remove("hidden");
-        },
-        // Disconnect Handler
-        () => { resetUi(); }
-      );
-    });
-
-    endVoiceBtn.addEventListener("click", () => {
-      closeVoiceChat();
-      resetUi();
-    });
-
-    function resetUi() {
-      voiceBtn.innerText = "Live Voice";
-      voiceBtn.disabled = false;
-      endVoiceBtn.classList.add("hidden");
-    }
+    // Bind modules safely into the window global context for standard native onclick attributes
+    window.generate = generate;
+    window.downloadText = downloadText;
+    window.downloadVideoPrompt = downloadVideoPrompt;
+    window.startVoiceChat = startVoiceChat;
+    window.stopVoiceChat = stopVoiceChat;
   </script>
 </body>
 </html>
