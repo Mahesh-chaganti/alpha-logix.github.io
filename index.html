@@ -501,55 +501,70 @@ ALWAYS use the tool for visual teaching.
 You are expected to teach visually.
 
 `,
-
+tool_choice: "auto",
     tools: [
 
-      {
-        type: "function",
+  {
 
-        name: "draw_chart_overlay",
+    type: "function",
 
-        description:
-          "Draws animated overlays on screen",
+    name: "draw_chart_overlay",
 
-        parameters: {
+    description:
+      "Draw overlays on screen while teaching",
 
-          type: "object",
+    parameters: {
 
-          properties: {
+      type: "object",
 
-            patternType: {
-              type: "string"
-            },
+      properties: {
 
-            points: {
+        patternType: {
+          type: "string"
+        },
 
-              type: "array",
+        points: {
 
-              items: {
+          type: "array",
 
-                type: "object",
+          items: {
 
-                properties: {
+            type: "object",
 
-                  x: {
-                    type: "number"
-                  },
+            properties: {
 
-                  y: {
-                    type: "number"
-                  }
-                }
+              x: {
+                type: "number"
+              },
+
+              y: {
+                type: "number"
               }
             },
 
-            annotation: {
-              type: "string"
-            }
+            required: [
+              "x",
+              "y"
+            ],
+
+            additionalProperties: false
           }
+        },
+
+        annotation: {
+          type: "string"
         }
-      }
-    ]
+      },
+
+      required: [
+        "patternType",
+        "points"
+      ],
+
+      additionalProperties: false
+    }
+  }
+]
   }
 };
 
@@ -677,6 +692,23 @@ dataChannel.onmessage = (event) => {
       }
     }
   }
+  if (
+
+  msg.item &&
+
+  msg.item.type === "function_call"
+
+) {
+
+  console.log(
+
+    "FUNCTION CALL DETECTED"
+
+  );
+
+  console.log(msg.item);
+
+}
 };
     const canvas =
   document.getElementById(
