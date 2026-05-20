@@ -46,7 +46,7 @@
   <div class="relative z-10 min-h-screen flex flex-col items-center justify-center px-6">
 
     <!-- LARGE BRAND TITLE HEADLINE -->
-    <h1 class="text-[72px] md:text-[180px] font-semibold tracking-[-0.08em] text-white/90 mountaineer leading-none select-none" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">
+    <h1 class="text-[72px] md:text-[180px] font-semibold tracking-[-0.08em] text-white/90 leading-none select-none" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">
       Alphalogix
     </h1>
 
@@ -103,17 +103,113 @@
     </div>
   </div>
 
-  <!-- MOUNT SYSTEM LOGIC HOOKS -->
+  <!-- MOUNT REALTME MODULE -->
   <script type="module">
-    import { generate, downloadText, downloadVideoPrompt } from '/api/generate.js';
     import { startVoiceChat, stopVoiceChat } from '/api/realtime.js';
-
-    // Bind modules safely into the window global context for standard native onclick attributes
-    window.generate = generate;
-    window.downloadText = downloadText;
-    window.downloadVideoPrompt = downloadVideoPrompt;
     window.startVoiceChat = startVoiceChat;
     window.stopVoiceChat = stopVoiceChat;
+  </script>
+
+  <!-- FRONTEND HANDLERS FOR THE VERCEL BACKEND -->
+  <script>
+    window.generatedText = "";
+    window.videoPrompt = "";
+
+    async function generate(type) {
+      const prompt = document.getElementById('prompt').value;
+      const output = document.getElementById('output');
+      const loading = document.getElementById('loading');
+
+      if (!prompt) {
+        alert('Please enter a prompt');
+        return;
+      }
+
+      output.innerHTML = '';
+      loading.classList.remove('hidden');
+
+      try {
+        // Dispatches directly to your serverless backend route
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, type })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Request failed');
+        }
+
+        const data = await response.json();
+
+        if (type === 'text') {
+          const text = data.choices?.[0]?.message?.content || 'No response';
+          output.innerHTML = `
+            <div class="bg-zinc-800 p-4 rounded-2xl whitespace-pre-wrap">${text}</div>
+            <button onclick="downloadText()" class="mt-2 bg-white text-black px-4 py-2 rounded-xl text-sm font-medium hover:bg-zinc-200 transition">
+              Download TXT
+            </button>
+          `;
+          window.generatedText = text;
+        }
+
+        if (type === 'image') {
+          const base64 = data.data?.[0]?.b64_json;
+          if (!base64) {
+            output.innerHTML = '<div class="text-red-400">Image generation failed</div>';
+            return;
+          }
+          const imageUrl = `data:image/png;base64,${base64}`;
+          output.innerHTML = `
+            <img src="${imageUrl}" class="rounded-2xl w-full max-w-xl" />
+            <a href="${imageUrl}" download="generated.png" class="inline-block bg-blue-500 px-4 py-2 rounded-xl mt-2 text-sm font-medium hover:bg-blue-600 transition">
+              Download Image
+            </a>
+          `;
+        }
+
+        if (type === 'video') {
+          output.innerHTML = `
+            <div class="bg-zinc-800 p-4 rounded-2xl space-y-3">
+              <p class="text-lg font-semibold">AI Video Prompt</p>
+              <p class="text-zinc-300">${prompt}</p>
+              <p class="text-sm text-zinc-500">Use this prompt with RunwayML, Sora, Pika, or Kling.</p>
+              <button onclick="downloadVideoPrompt()" class="bg-purple-500 px-4 py-2 rounded-xl text-sm font-medium hover:bg-purple-600 transition">
+                Download Prompt
+              </button>
+            </div>
+          `;
+          window.videoPrompt = prompt;
+        }
+      } catch (e) {
+        console.error(e);
+        output.innerHTML = `
+          <div class="bg-red-500/20 border border-red-500 p-4 rounded-2xl text-red-400">
+            <strong>Error:</strong> ${e.message}
+          </div>
+        `;
+      }
+      loading.classList.add('hidden');
+    }
+
+    function downloadText() {
+      const blob = new Blob([window.generatedText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'generated.txt';
+      a.click();
+    }
+
+    function downloadVideoPrompt() {
+      const blob = new Blob([window.videoPrompt], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'video_prompt.txt';
+      a.click();
+    }
   </script>
 </body>
 </html>
