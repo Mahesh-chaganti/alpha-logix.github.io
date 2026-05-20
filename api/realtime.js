@@ -5,7 +5,8 @@ let peerConnection = null;
 let dataChannel = null;
 let audioElement = null;
 
-export async function initVoiceChat(onConnect, onDisconnect) {
+// Renamed from initVoiceChat to startVoiceChat to match your index.html exactly
+export async function startVoiceChat(onConnect, onDisconnect) {
   peerConnection = new RTCPeerConnection();
   audioElement = document.createElement("audio");
   audioElement.autoplay = true;
@@ -18,7 +19,14 @@ export async function initVoiceChat(onConnect, onDisconnect) {
   dataChannel = peerConnection.createDataChannel("oai-events");
 
   dataChannel.onopen = () => {
-    onConnect();
+    if (typeof onConnect === 'function') onConnect();
+    
+    // Fallback standard UI state change matching index.html buttons
+    const voiceBtnText = document.getElementById("voiceBtnText");
+    const voiceWave = document.getElementById("voiceWave");
+    if (voiceBtnText) voiceBtnText.innerText = "Live";
+    if (voiceWave) voiceWave.classList.remove("hidden");
+    
     console.log("WebRTC Channel connected cleanly.");
   };
 
@@ -56,13 +64,12 @@ export async function initVoiceChat(onConnect, onDisconnect) {
   };
 
   // Connect via backend SDP mapping handshake
-  // Inside your frontend codebase (e.g., realtime.js)
-const sessionConfigResponse = await fetch("/api/generate", { 
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ type: "realtime" }) // Matches the router filter condition
-});
-const sessionConfig = await sessionConfigResponse.json();
+  const sessionConfigResponse = await fetch("/api/generate", { 
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "realtime" }) 
+  });
+  const sessionConfig = await sessionConfigResponse.json();
 
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
@@ -80,9 +87,20 @@ const sessionConfig = await sessionConfigResponse.json();
   await peerConnection.setRemoteDescription(answer);
 }
 
-export function closeVoiceChat() {
+// Renamed from closeVoiceChat to stopVoiceChat to match your index.html exactly
+export function stopVoiceChat() {
   if (peerConnection) peerConnection.close();
   if (audioElement) audioElement.srcObject = null;
+  
+  // Revert buttons back to normal
+  const voiceBtnText = document.getElementById("voiceBtnText");
+  const voiceWave = document.getElementById("voiceWave");
+  const endVoiceBtn = document.getElementById("endVoiceBtn");
+  
+  if (voiceBtnText) voiceBtnText.innerText = "Live Voice";
+  if (voiceWave) voiceWave.classList.add("hidden");
+  if (endVoiceBtn) endVoiceBtn.classList.add("hidden");
+
   console.log("Session disconnected.");
 }
 
