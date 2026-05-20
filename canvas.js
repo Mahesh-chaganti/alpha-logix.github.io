@@ -1,13 +1,36 @@
 // canvas.js - Modular drawing execution script
-const canvas = document.getElementById("overlayCanvas");
-const ctx = canvas.getContext("2d");
+
+// Declare holders globally within the module scope
+let canvas = null;
+let ctx = null;
+
+// Initialize function to safely grab elements once the DOM is ready
+function initCanvas() {
+  if (!canvas) {
+    canvas = document.getElementById("overlayCanvas");
+    if (canvas) {
+      ctx = canvas.getContext("2d");
+      resizeCanvas();
+    }
+  }
+}
 
 export function resizeCanvas() {
+  // Guard clause in case resize triggers before DOM initialization finishes
+  if (!canvas) return; 
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 
 export async function drawOverlay(data) {
+  // Ensure elements are safely bound before running drawing operations
+  initCanvas();
+  
+  if (!canvas || !ctx) {
+    console.error("Canvas overlay target could not be found in the DOM.");
+    return;
+  }
+
   const points = data.points;
   if (!points || points.length === 0) return;
 
@@ -44,14 +67,21 @@ export async function drawOverlay(data) {
     }
   }
 
-  // Draw Context Annotation Text
-  ctx.font = "bold 20px sans-serif";
-  ctx.fillStyle = "#ffffff";
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = "#000000";
-  ctx.fillText(data.annotation, startX, startY - 20);
+  // Draw Context Annotation Text safely
+  if (data.annotation) {
+    ctx.font = "bold 20px sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#000000";
+    ctx.fillText(data.annotation, startX, startY - 20);
+  }
 }
 
-// Global Canvas Resize Listener Hook
-window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
+// Set up listeners safely using window lifecycle events
+if (typeof window !== "undefined") {
+  window.addEventListener("resize", resizeCanvas);
+  // Wait until the DOM content is completely parsed before bootstrapping paths
+  window.addEventListener("DOMContentLoaded", initCanvas);
+  // Fallback execution if script finishes parsing after DOMContentLoaded fires
+  initCanvas();
+}
