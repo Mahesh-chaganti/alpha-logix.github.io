@@ -8,25 +8,54 @@ let audioElement = null;
 // Renamed from initVoiceChat to startVoiceChat to match your index.html exactly
 export async function startVoiceChat(onConnect, onDisconnect) {
   try {
+    // Get session from backend
+    const sessionResponse = await fetch("/api/generate", { 
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "realtime" }) 
+    });
+
+    if (!sessionResponse.ok) {
+      throw new Error(`Backend error: ${sessionResponse.status} - ${sessionResponse.statusText}`);
+    }
+
+    const session = await sessionResponse.json();
+
+    // Validate the response structure
+    if (!session || !session.client_secret) {
+      throw new Error("Backend did not return client_secret. Check your /api/generate endpoint.");
+    }
+
+    const clientSecret = session.client_secret.value || session.client_secret;
+    if (!clientSecret) {
+      throw new Error("client_secret.value is undefined. Check your backend response format.");
+    }
+
+    // Initialize RTCPeerConnection
     peerConnection = new RTCPeerConnection();
     audioElement = document.createElement("audio");
     audioElement.autoplay = true;
 
     peerConnection.ontrack = e => { audioElement.srcObject = e.streams[0]; };
 
+    // Get user's audio stream
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach(track => { peerConnection.addTrack(track, stream); });
 
+    // Create data channel for receiving server events
     dataChannel = peerConnection.createDataChannel("oai-events");
 
     dataChannel.onopen = () => {
       if (typeof onConnect === 'function') onConnect();
       
-      // Fallback standard UI state change matching index.html buttons
+      // Update UI
       const voiceBtnText = document.getElementById("voiceBtnText");
       const voiceWave = document.getElementById("voiceWave");
+      const endVoiceBtn = document.getElementById("endVoiceBtn");
+      
       if (voiceBtnText) voiceBtnText.innerText = "Live";
       if (voiceWave) voiceWave.classList.remove("hidden");
+      if (endVoiceBtn) endVoiceBtn.classList.remove("hidden");
       
       console.log("WebRTC Channel connected cleanly.");
     };
@@ -64,36 +93,15 @@ export async function startVoiceChat(onConnect, onDisconnect) {
       }
     };
 
-    // Connect via backend SDP mapping handshake
-    const sessionConfigResponse = await fetch("/api/generate", { 
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "realtime" }) 
-    });
-
-    if (!sessionConfigResponse.ok) {
-      throw new Error(`Backend error: ${sessionConfigResponse.status} - ${sessionConfigResponse.statusText}`);
-    }
-
-    const sessionConfig = await sessionConfigResponse.json();
-
-    // Validate the response structure
-    if (!sessionConfig || !sessionConfig.client_secret) {
-      throw new Error("Backend did not return client_secret. Check your /api/generate endpoint implementation for realtime type.");
-    }
-
-    const apiKey = sessionConfig.client_secret.value || sessionConfig.client_secret;
-    if (!apiKey) {
-      throw new Error("client_secret.value is undefined. Check your backend response format.");
-    }
-
+    // Create SDP offer
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
 
+    // Exchange SDP with OpenAI's realtime endpoint
     const sdpResponse = await fetch("https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${clientSecret}`,
         "Content-Type": "application/sdp"
       },
       body: offer.sdp
@@ -103,8 +111,12 @@ export async function startVoiceChat(onConnect, onDisconnect) {
       throw new Error(`OpenAI API error: ${sdpResponse.status} - ${sdpResponse.statusText}`);
     }
 
-    const answer = { type: "answer", sdp: await sdpResponse.text() };
-    await peerConnection.setRemoteDescription(answer);
+    // Set remote description from OpenAI's answer
+    const answerSdp = await sdpResponse.text();
+    const answer = { type: "answer", sdp: answerSdp };
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+
+    console.log("WebRTC connection established successfully");
   } catch (error) {
     console.error("Error in startVoiceChat:", error);
     alert(`Voice chat error: ${error.message}`);
