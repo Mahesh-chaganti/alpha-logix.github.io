@@ -447,6 +447,79 @@ let peerConnection;
 let dataChannel;
 let audioElement;
 
+// SESSION CONFIG
+const sessionUpdate = {
+
+  type: "session.update",
+
+  session: {
+
+    instructions:
+      `
+      You are an expert live classroom AI teacher.
+
+      Explain concepts verbally.
+
+      ALSO use drawing tools to visually teach.
+
+      Draw naturally like a human teacher.
+
+      Animate drawings progressively.
+
+      Use overlays often.
+      `,
+
+    tools: [
+
+      {
+        type: "function",
+
+        name: "draw_chart_overlay",
+
+        description:
+          "Draws animated overlays on screen",
+
+        parameters: {
+
+          type: "object",
+
+          properties: {
+
+            patternType: {
+              type: "string"
+            },
+
+            points: {
+
+              type: "array",
+
+              items: {
+
+                type: "object",
+
+                properties: {
+
+                  x: {
+                    type: "number"
+                  },
+
+                  y: {
+                    type: "number"
+                  }
+                }
+              }
+            },
+
+            annotation: {
+              type: "string"
+            }
+          }
+        }
+      }
+    ]
+  }
+};
+
 async function startVoiceChat() {
 
   try {
@@ -500,8 +573,144 @@ async function startVoiceChat() {
         .getElementById("voiceBtnText")
         .innerText = "Live";
 
+      // SEND SESSION CONFIG
+
+  dataChannel.send(
+
+    JSON.stringify(sessionUpdate)
+
+  );
+
       console.log("Voice Connected");
     };
+    // LISTEN FOR AI EVENTS
+
+dataChannel.onmessage = (event) => {
+
+  const msg =
+
+    JSON.parse(event.data);
+
+  console.log(msg);
+
+  // TOOL CALL
+
+  if (
+
+    msg.type ===
+
+    "response.function_call_arguments.done"
+
+  ) {
+
+    const args =
+
+      JSON.parse(msg.arguments);
+
+    if (
+
+      msg.name ===
+
+      "draw_chart_overlay"
+
+    ) {
+
+      drawOverlay(args);
+
+    }
+
+  }
+
+};
+    const canvas =
+  document.getElementById(
+    "overlayCanvas"
+  );
+
+const ctx =
+  canvas.getContext("2d");
+
+function resizeCanvas() {
+
+  canvas.width =
+    window.innerWidth;
+
+  canvas.height =
+    window.innerHeight;
+}
+
+resizeCanvas();
+
+window.addEventListener(
+  "resize",
+  resizeCanvas
+);
+    async function drawOverlay(data) {
+
+  const points =
+    data.points;
+
+  ctx.strokeStyle =
+    "#00e0ff";
+
+  ctx.lineWidth = 4;
+
+  ctx.shadowColor =
+    "#00e0ff";
+
+  ctx.shadowBlur = 20;
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    points[0].x,
+    points[0].y
+  );
+
+  // HUMAN DRAW ANIMATION
+  for (let i = 1; i < points.length; i++) {
+
+    const start =
+      points[i - 1];
+
+    const end =
+      points[i];
+
+    const steps = 60;
+
+    for (let s = 0; s <= steps; s++) {
+
+      const x =
+        start.x +
+        ((end.x - start.x) * s) / steps;
+
+      const y =
+        start.y +
+        ((end.y - start.y) * s) / steps;
+
+      ctx.lineTo(x, y);
+
+      ctx.stroke();
+
+      await new Promise(r =>
+        setTimeout(r, 8)
+      );
+    }
+  }
+
+  // LABEL
+  ctx.font =
+    "18px sans-serif";
+
+  ctx.fillStyle =
+    "white";
+
+  ctx.fillText(
+    data.annotation,
+    points[0].x,
+    points[0].y - 20
+  );
+}
 
     // OFFER
     const offer =
