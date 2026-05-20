@@ -1,5 +1,5 @@
 // realtime.js - Connection lifecycle and event dispatching
-import { drawOverlay } from './canvas.js';
+import { drawOverlay } from '/canvas.js';
 
 let peerConnection = null;
 let dataChannel = null;
