@@ -98,7 +98,7 @@ export async function startVoiceChat(onConnect, onDisconnect) {
     await peerConnection.setLocalDescription(offer);
 
     // Exchange SDP with OpenAI's realtime endpoint
-    const sdpResponse = await fetch("https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview", {
+    const sdpResponse = await fetch("https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${clientSecret}`,
