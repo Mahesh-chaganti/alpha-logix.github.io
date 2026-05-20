@@ -24,7 +24,7 @@ export default async function handler(req, res) {
       const response = await axios.post(
         "https://api.openai.com/v1/realtime/sessions",
         {
-          model: "gpt-4o-realtime-preview",
+          model: "gpt-4o-realtime-preview-2024-12-17",
           modalities: ["audio", "text"],
           instructions: "You are a live interactive AI assistant. When explaining visual patterns, trends, charts, or shapes, execute the 'draw_chart_overlay' function.",
           tool_choice: "auto",
