@@ -464,16 +464,6 @@ async function startVoiceChat() {
       .getElementById("voiceBtnText")
       .innerText = "Connecting...";
 
-    // GET EPHEMERAL TOKEN
-    const tokenResponse =
-      await fetch("/api/realtime-token");
-
-    const tokenData =
-      await tokenResponse.json();
-
-    const EPHEMERAL_KEY =
-      tokenData.client_secret.value;
-
     // WEBRTC
     peerConnection =
       new RTCPeerConnection();
@@ -522,29 +512,22 @@ async function startVoiceChat() {
     );
 
     // CONNECT TO OPENAI REALTIME
-    const baseUrl =
-      "https://api.openai.com/v1/realtime";
+    // CONNECT TO YOUR VERCEL BACKEND
+const sdpResponse = await fetch(
 
-    const model =
-  "gpt-4o-realtime-preview-2024-12-17";
-    const sdpResponse =
-      await fetch(
-        `${baseUrl}?model=${model}`,
-        {
-          method: "POST",
+  "/api/realtime",
 
-          body: offer.sdp,
+  {
+    method: "POST",
 
-          headers: {
-            Authorization:
-              `Bearer ${EPHEMERAL_KEY}`,
+    headers: {
+      "Content-Type":
+        "application/sdp"
+    },
 
-            "Content-Type":
-              "application/sdp"
-          }
-        }
-      );
-
+    body: offer.sdp
+  }
+);
     const answer = {
       type: "answer",
       sdp: await sdpResponse.text()
