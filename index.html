@@ -5,6 +5,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI File Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+
+    .wave-bar{
+
+      width:4px;
+
+      border-radius:999px;
+
+      background:white;
+
+      animation:wave 1s infinite ease-in-out;
+
+    }
+
+    .wave-bar:nth-child(1){
+
+      height:8px;
+
+      animation-delay:0s;
+
+    }
+
+    .wave-bar:nth-child(2){
+
+      height:18px;
+
+      animation-delay:0.2s;
+
+    }
+
+    .wave-bar:nth-child(3){
+
+      height:10px;
+
+      animation-delay:0.4s;
+
+    }
+
+    .wave-bar:nth-child(4){
+
+      height:20px;
+
+      animation-delay:0.6s;
+
+    }
+
+    @keyframes wave{
+
+      0%{
+
+        transform:scaleY(0.5);
+
+        opacity:0.5;
+
+      }
+
+      50%{
+
+        transform:scaleY(1.5);
+
+        opacity:1;
+
+      }
+
+      100%{
+
+        transform:scaleY(0.5);
+
+        opacity:0.5;
+
+      }
+
+    }
+  </style>
 </head>
 <body class="bg-[#0d0d0f] text-white min-h-screen overflow-hidden relative">
 
@@ -166,6 +240,63 @@
 >
   Video Prompt
 </button>
+<button
+  id="voiceBtn"
+  onclick="startVoiceChat()"
+  class="
+    px-6
+    py-4
+    rounded-2xl
+    text-white
+    font-semibold
+    hover:scale-105
+    active:scale-95
+    transition
+    shadow-2xl
+    bg-gradient-to-b
+    from-cyan-400
+    to-blue-600
+    flex
+    items-center
+    gap-3
+  "
+>
+  <div
+    id="voiceWave"
+    class="hidden flex gap-1 items-end h-5"
+  >
+    <span class="wave-bar"></span>
+    <span class="wave-bar"></span>
+    <span class="wave-bar"></span>
+    <span class="wave-bar"></span>
+  </div>
+
+  <span id="voiceBtnText">
+    Live Voice
+  </span>
+</button>
+
+<button
+  id="endVoiceBtn"
+  onclick="stopVoiceChat()"
+  class="
+    hidden
+    px-6
+    py-4
+    rounded-2xl
+    text-white
+    font-semibold
+    hover:scale-105
+    active:scale-95
+    transition
+    shadow-2xl
+    bg-gradient-to-b
+    from-red-400
+    to-red-600
+  "
+>
+  End Call
+</button>
 
       </div>
 
@@ -311,6 +442,147 @@
       a.download = 'video_prompt.txt';
       a.click();
     }
+
+let peerConnection;
+let dataChannel;
+let audioElement;
+
+async function startVoiceChat() {
+
+  try {
+
+    // UI
+    document
+      .getElementById("voiceWave")
+      .classList.remove("hidden");
+
+    document
+      .getElementById("endVoiceBtn")
+      .classList.remove("hidden");
+
+    document
+      .getElementById("voiceBtnText")
+      .innerText = "Connecting...";
+
+    // GET EPHEMERAL TOKEN
+    const tokenResponse =
+      await fetch("/api/realtime-token");
+
+    const tokenData =
+      await tokenResponse.json();
+
+    const EPHEMERAL_KEY =
+      tokenData.client_secret.value;
+
+    // WEBRTC
+    peerConnection =
+      new RTCPeerConnection();
+
+    // AUDIO
+    audioElement =
+      document.createElement("audio");
+
+    audioElement.autoplay = true;
+
+    peerConnection.ontrack = e => {
+      audioElement.srcObject = e.streams[0];
+    };
+
+    // MIC
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+        audio: true
+      });
+
+    stream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, stream);
+    });
+
+    // DATA CHANNEL
+    dataChannel =
+      peerConnection.createDataChannel(
+        "oai-events"
+      );
+
+    dataChannel.onopen = () => {
+
+      document
+        .getElementById("voiceBtnText")
+        .innerText = "Live";
+
+      console.log("Voice Connected");
+    };
+
+    // OFFER
+    const offer =
+      await peerConnection.createOffer();
+
+    await peerConnection.setLocalDescription(
+      offer
+    );
+
+    // CONNECT TO OPENAI REALTIME
+    const baseUrl =
+      "https://api.openai.com/v1/realtime";
+
+    const model =
+      "gpt-4o-realtime-preview";
+
+    const sdpResponse =
+      await fetch(
+        `${baseUrl}?model=${model}`,
+        {
+          method: "POST",
+
+          body: offer.sdp,
+
+          headers: {
+            Authorization:
+              `Bearer ${EPHEMERAL_KEY}`,
+
+            "Content-Type":
+              "application/sdp"
+          }
+        }
+      );
+
+    const answer = {
+      type: "answer",
+      sdp: await sdpResponse.text()
+    };
+
+    await peerConnection.setRemoteDescription(
+      answer
+    );
+
+  } catch (e) {
+
+    console.error(e);
+
+    alert("Voice connection failed");
+
+    stopVoiceChat();
+  }
+}
+
+function stopVoiceChat() {
+
+  if (peerConnection) {
+    peerConnection.close();
+  }
+
+  document
+    .getElementById("voiceWave")
+    .classList.add("hidden");
+
+  document
+    .getElementById("endVoiceBtn")
+    .classList.add("hidden");
+
+  document
+    .getElementById("voiceBtnText")
+    .innerText = "Live Voice";
+}
   </script>
 </body>
 </html>
