@@ -468,18 +468,40 @@ const sessionUpdate = {
 
     instructions:
       `
-      You are an expert live classroom AI teacher.
 
-      Explain concepts verbally.
+You are a live classroom AI teacher.
 
-      ALSO use drawing tools to visually teach.
+VERY IMPORTANT:
 
-      Draw naturally like a human teacher.
+Whenever explaining:
 
-      Animate drawings progressively.
+- charts
 
-      Use overlays often.
-      `,
+- graphs
+
+- support resistance
+
+- patterns
+
+- arrows
+
+- technical analysis
+
+- math
+
+- diagrams
+
+- visual concepts
+
+You MUST call draw_chart_overlay.
+
+DO NOT only explain verbally.
+
+ALWAYS use the tool for visual teaching.
+
+You are expected to teach visually.
+
+`
 
     tools: [
 
@@ -592,47 +614,70 @@ async function startVoiceChat() {
     JSON.stringify(sessionUpdate)
 
   );
+      console.log(
+
+  "SESSION UPDATE SENT",
+
+  sessionUpdate
+
+);
 
       console.log("Voice Connected");
     };
     // LISTEN FOR AI EVENTS
-
 dataChannel.onmessage = (event) => {
 
   const msg =
-
     JSON.parse(event.data);
 
-  console.log(msg);
+  console.log("EVENT:", msg);
 
-  // TOOL CALL
-
+  // FUNCTION CALL
   if (
+    msg.type ===
+      "response.function_call_arguments.done"
+
+    ||
 
     msg.type ===
-
-    "response.function_call_arguments.done"
-
+      "response.output_item.done"
   ) {
 
-    const args =
+    console.log(
+      "POSSIBLE TOOL EVENT"
+    );
 
-      JSON.parse(msg.arguments);
+    console.log(msg);
 
     if (
-
-      msg.name ===
-
-      "draw_chart_overlay"
-
+      msg.item &&
+      msg.item.type === "function_call"
     ) {
 
-      drawOverlay(args);
+      const args =
+        JSON.parse(
+          msg.item.arguments
+        );
 
+      console.log(
+        "FUNCTION:",
+        msg.item.name
+      );
+
+      console.log(
+        "ARGS:",
+        args
+      );
+
+      if (
+        msg.item.name ===
+        "draw_chart_overlay"
+      ) {
+
+        drawOverlay(args);
+      }
     }
-
   }
-
 };
     const canvas =
   document.getElementById(
