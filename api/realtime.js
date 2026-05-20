@@ -56,8 +56,13 @@ export async function initVoiceChat(onConnect, onDisconnect) {
   };
 
   // Connect via backend SDP mapping handshake
-  const sessionConfigResponse = await fetch("/api/realtime", { method: "POST" });
-  const sessionConfig = await sessionConfigResponse.json();
+  // Inside your frontend codebase (e.g., realtime.js)
+const sessionConfigResponse = await fetch("/api/generate", { 
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ type: "realtime" }) // Matches the router filter condition
+});
+const sessionConfig = await sessionConfigResponse.json();
 
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
