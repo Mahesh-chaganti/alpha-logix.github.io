@@ -1,80 +1,88 @@
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// realtime.js - Connection lifecycle and event dispatching
+import { drawOverlay } from './canvas.js';
 
-export default async function handler(req, res) {
+let peerConnection = null;
+let dataChannel = null;
+let audioElement = null;
 
-  if (req.method !== "POST") {
-    return res.status(405).send("Method not allowed");
-  }
+export async function initVoiceChat(onConnect, onDisconnect) {
+  peerConnection = new RTCPeerConnection();
+  audioElement = document.createElement("audio");
+  audioElement.autoplay = true;
 
-  try {
+  peerConnection.ontrack = e => { audioElement.srcObject = e.streams[0]; };
 
-    let body = "";
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  stream.getTracks().forEach(track => { peerConnection.addTrack(track, stream); });
 
-    await new Promise((resolve, reject) => {
+  dataChannel = peerConnection.createDataChannel("oai-events");
 
-      req.on("data", chunk => {
-        body += chunk.toString();
-      });
+  dataChannel.onopen = () => {
+    onConnect();
+    console.log("WebRTC Channel connected cleanly.");
+  };
 
-      req.on("end", resolve);
+  dataChannel.onmessage = async (event) => {
+    const msg = JSON.parse(event.data);
+    console.log("RAW SERVER EVENT TYPE:", msg.type);
 
-      req.on("error", reject);
-    });
+    if (msg.type === "response.function_call_arguments.done") {
+      const { call_id: callId, name, arguments: rawArgs } = msg;
 
-    const formData = new FormData();
+      if (name === "draw_chart_overlay") {
+        try {
+          const args = JSON.parse(rawArgs);
+          console.log("VALID ARGUMENTS RESOLVED, CALLING CANVAS:", args);
+          
+          await drawOverlay(args);
 
-    formData.set("sdp", body);
+          // Return successful receipt validation frame
+          sendEvent({
+            type: "conversation.item.create",
+            item: {
+              type: "function_call_output",
+              call_id: callId,
+              output: JSON.stringify({ status: "success", rendered: true })
+            }
+          });
 
-    formData.set(
-      "session",
-
-      JSON.stringify({
-        type: "realtime",
-        model: "gpt-realtime-2",
-        audio: {
-          output: {
-            voice: "alloy"
-          }
+          // Prompt the model to naturally continue speaking
+          sendEvent({ type: "response.create" });
+        } catch (err) {
+          console.error("Payload execution parse mapping fault:", err);
         }
-      })
-    );
-
-    const response = await fetch(
-
-      "https://api.openai.com/v1/realtime/calls",
-
-      {
-        method: "POST",
-
-        headers: {
-
-          Authorization:
-            `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-
-        body: formData
       }
-    );
+    }
+  };
 
-    const sdp = await response.text();
+  // Connect via backend SDP mapping handshake
+  const sessionConfigResponse = await fetch("/api/realtime", { method: "POST" });
+  const sessionConfig = await sessionConfigResponse.json();
 
-    res.setHeader(
-      "Content-Type",
-      "application/sdp"
-    );
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
 
-    return res.status(200).send(sdp);
+  const sdpResponse = await fetch("https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${sessionConfig.client_secret.value}`,
+      "Content-Type": "application/sdp"
+    },
+    body: offer.sdp
+  });
 
-  } catch (error) {
+  const answer = { type: "answer", sdp: await sdpResponse.text() };
+  await peerConnection.setRemoteDescription(answer);
+}
 
-    console.error(error);
+export function closeVoiceChat() {
+  if (peerConnection) peerConnection.close();
+  if (audioElement) audioElement.srcObject = null;
+  console.log("Session disconnected.");
+}
 
-    return res.status(500).json({
-      error: error.message
-    });
+function sendEvent(payload) {
+  if (dataChannel && dataChannel.readyState === "open") {
+    dataChannel.send(JSON.stringify(payload));
   }
 }
