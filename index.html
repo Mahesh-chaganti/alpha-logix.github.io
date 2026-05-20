@@ -627,100 +627,55 @@ async function startVoiceChat() {
       );
 
     dataChannel.onopen = () => {
-
-      document
-        .getElementById("voiceBtnText")
-        .innerText = "Live";
-
-      // SEND SESSION CONFIG
-
-  dataChannel.send(
-
-    JSON.stringify(sessionUpdate)
-
-  );
-      console.log(
-
-  "SESSION UPDATE SENT",
-
-  sessionUpdate
-
-);
-
-      console.log("Voice Connected");
+      document.getElementById("voiceBtnText").innerText = "Live";
+      console.log("WebRTC Data Channel open. Waiting for session.created...");
     };
-    // LISTEN FOR AI EVENTS
-dataChannel.onmessage = (event) => {
 
-  const msg =
-    JSON.parse(event.data);
+    dataChannel.onmessage = async (event) => {
+      const msg = JSON.parse(event.data);
+      console.log("SERVER LOG EVENT:", msg.type, msg);
 
-  console.log("EVENT:", msg);
-
-  // FUNCTION CALL
-  if (
-    msg.type ===
-      "response.function_call_arguments.done"
-
-    ||
-
-    msg.type ===
-      "response.output_item.done"
-  ) {
-
-    console.log(
-      "POSSIBLE TOOL EVENT"
-    );
-
-    console.log(msg);
-
-    if (
-      msg.item &&
-      msg.item.type === "function_call"
-    ) {
-
-      const args =
-        JSON.parse(
-          msg.item.arguments
-        );
-
-      console.log(
-        "FUNCTION:",
-        msg.item.name
-      );
-
-      console.log(
-        "ARGS:",
-        args
-      );
-
-      if (
-        msg.item.name ===
-        "draw_chart_overlay"
-      ) {
-
-        drawOverlay(args);
+      // 1. Send settings ONLY when the server says it is ready
+      if (msg.type === "session.created") {
+        console.log("OpenAI Session ready! Registering overlay tools...");
+        dataChannel.send(JSON.stringify(sessionUpdate));
       }
-    }
-  }
-  if (
 
-  msg.item &&
+      // 2. Correctly catch and process the tool arguments when done
+      if (msg.type === "response.function_call_arguments.done") {
+        const callId = msg.call_id;
+        const name = msg.name;
+        const rawArgs = msg.arguments;
+        
+        if (name === "draw_chart_overlay") {
+          try {
+            const args = JSON.parse(rawArgs);
+            console.log("EXECUTING CANVAS PATH RENDER:", args);
+            
+            // Run the canvas drawing logic
+            await drawOverlay(args);
 
-  msg.item.type === "function_call"
+            // Send execution receipt back to OpenAI
+            const toolResponseEvent = {
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: callId,
+                output: JSON.stringify({ status: "success", rendered: true })
+              }
+            };
+            dataChannel.send(JSON.stringify(toolResponseEvent));
+            console.log("SENT TOOL OUTPUT BACK TO SERVER");
 
-) {
+            // Tell the AI to resume talking now that drawing is done
+            dataChannel.send(JSON.stringify({ type: "response.create" }));
 
-  console.log(
-
-    "FUNCTION CALL DETECTED"
-
-  );
-
-  console.log(msg.item);
-
-}
-};
+          } catch (err) {
+            console.error("JSON Argument parsing anomaly: ", err);
+          }
+        }
+      }
+    };
     const canvas =
   document.getElementById(
     "overlayCanvas"
